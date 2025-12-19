@@ -15,6 +15,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Build-time variables (set via -ldflags)
+var (
+	version   = "dev"
+	buildTime = "unknown"
+	gitCommit = "unknown"
+)
+
 var (
 	debug        bool
 	monitor      bool
@@ -22,6 +29,7 @@ var (
 	cmdString    string
 	exposePorts  []string
 	exitCode     int
+	showVersion  bool
 )
 
 func main() {
@@ -65,6 +73,7 @@ Configuration file format (~/.fence.json):
 	rootCmd.Flags().StringVarP(&settingsPath, "settings", "s", "", "Path to settings file (default: ~/.fence.json)")
 	rootCmd.Flags().StringVarP(&cmdString, "c", "c", "", "Run command string directly (like sh -c)")
 	rootCmd.Flags().StringArrayVarP(&exposePorts, "port", "p", nil, "Expose port for inbound connections (can be used multiple times)")
+	rootCmd.Flags().BoolVarP(&showVersion, "version", "v", false, "Show version information")
 
 	rootCmd.Flags().SetInterspersed(true)
 
@@ -76,6 +85,14 @@ Configuration file format (~/.fence.json):
 }
 
 func runCommand(cmd *cobra.Command, args []string) error {
+	if showVersion {
+		fmt.Printf("fence - lightweight, container-free sandbox for running untrusted commands\n")
+		fmt.Printf("  Version: %s\n", version)
+		fmt.Printf("  Built:   %s\n", buildTime)
+		fmt.Printf("  Commit:  %s\n", gitCommit)
+		return nil
+	}
+
 	var command string
 	switch {
 	case cmdString != "":
