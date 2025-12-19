@@ -26,14 +26,15 @@ func NormalizePath(pathPattern string) string {
 
 	normalized := pathPattern
 
-	// Expand ~ to home directory
-	if pathPattern == "~" {
+	// Expand ~ and relative paths
+	switch {
+	case pathPattern == "~":
 		normalized = home
-	} else if strings.HasPrefix(pathPattern, "~/") {
+	case strings.HasPrefix(pathPattern, "~/"):
 		normalized = filepath.Join(home, pathPattern[2:])
-	} else if strings.HasPrefix(pathPattern, "./") || strings.HasPrefix(pathPattern, "../") {
+	case strings.HasPrefix(pathPattern, "./"), strings.HasPrefix(pathPattern, "../"):
 		normalized, _ = filepath.Abs(filepath.Join(cwd, pathPattern))
-	} else if !filepath.IsAbs(pathPattern) && !ContainsGlobChars(pathPattern) {
+	case !filepath.IsAbs(pathPattern) && !ContainsGlobChars(pathPattern):
 		normalized, _ = filepath.Abs(filepath.Join(cwd, pathPattern))
 	}
 

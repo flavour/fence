@@ -63,7 +63,7 @@ func DefaultConfigPath() string {
 
 // Load loads configuration from a file path.
 func Load(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // user-provided config path - intentional
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil

@@ -77,11 +77,12 @@ Configuration file format (~/.fence.json):
 
 func runCommand(cmd *cobra.Command, args []string) error {
 	var command string
-	if cmdString != "" {
+	switch {
+	case cmdString != "":
 		command = cmdString
-	} else if len(args) > 0 {
+	case len(args) > 0:
 		command = strings.Join(args, " ")
-	} else {
+	default:
 		return fmt.Errorf("no command specified. Use -c <command> or provide command arguments")
 	}
 
@@ -148,7 +149,7 @@ func runCommand(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "[fence] Sandboxed command: %s\n", sandboxedCommand)
 	}
 
-	execCmd := exec.Command("sh", "-c", sandboxedCommand)
+	execCmd := exec.Command("sh", "-c", sandboxedCommand) //nolint:gosec // sandboxedCommand is constructed from user input - intentional
 	execCmd.Stdin = os.Stdin
 	execCmd.Stdout = os.Stdout
 	execCmd.Stderr = os.Stderr
@@ -159,7 +160,7 @@ func runCommand(cmd *cobra.Command, args []string) error {
 	go func() {
 		sig := <-sigChan
 		if execCmd.Process != nil {
-			execCmd.Process.Signal(sig)
+			_ = execCmd.Process.Signal(sig)
 		}
 		// Give child time to exit, then cleanup will happen via defer
 	}()

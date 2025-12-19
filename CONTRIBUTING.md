@@ -44,7 +44,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full project structure and compon
 - Keep edits focused and covered by tests where possible.
 - Update [ARCHITECTURE.md](ARCHITECTURE.md) when adding features or changing behavior.
 - Prefer small, reviewable PRs with a clear rationale.
-- Run `make fmt` and `make lint` before committing.
+- Run `make fmt` and `make lint` before committing. This project uses `golangci-lint` v1.64.8.
 
 ## Testing
 

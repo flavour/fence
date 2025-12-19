@@ -94,8 +94,8 @@ func (m *LogMonitor) Stop() {
 	}
 
 	if m.cmd != nil && m.cmd.Process != nil {
-		m.cmd.Process.Kill()
-		m.cmd.Wait()
+		_ = m.cmd.Process.Kill()
+		_ = m.cmd.Wait()
 	}
 
 	m.running = false

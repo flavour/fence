@@ -38,7 +38,9 @@ func NewLinuxBridge(httpProxyPort, socksProxyPort int, debug bool) (*LinuxBridge
 	}
 
 	id := make([]byte, 8)
-	rand.Read(id)
+	if _, err := rand.Read(id); err != nil {
+		return nil, fmt.Errorf("failed to generate socket ID: %w", err)
+	}
 	socketID := hex.EncodeToString(id)
 
 	tmpDir := os.TempDir()
@@ -56,7 +58,7 @@ func NewLinuxBridge(httpProxyPort, socksProxyPort int, debug bool) (*LinuxBridge
 		fmt.Sprintf("UNIX-LISTEN:%s,fork,reuseaddr", httpSocketPath),
 		fmt.Sprintf("TCP:localhost:%d", httpProxyPort),
 	}
-	bridge.httpProcess = exec.Command("socat", httpArgs...)
+	bridge.httpProcess = exec.Command("socat", httpArgs...) //nolint:gosec // args constructed from trusted input
 	if debug {
 		fmt.Fprintf(os.Stderr, "[fence:linux] Starting HTTP bridge: socat %s\n", strings.Join(httpArgs, " "))
 	}
@@ -69,7 +71,7 @@ func NewLinuxBridge(httpProxyPort, socksProxyPort int, debug bool) (*LinuxBridge
 		fmt.Sprintf("UNIX-LISTEN:%s,fork,reuseaddr", socksSocketPath),
 		fmt.Sprintf("TCP:localhost:%d", socksProxyPort),
 	}
-	bridge.socksProcess = exec.Command("socat", socksArgs...)
+	bridge.socksProcess = exec.Command("socat", socksArgs...) //nolint:gosec // args constructed from trusted input
 	if debug {
 		fmt.Fprintf(os.Stderr, "[fence:linux] Starting SOCKS bridge: socat %s\n", strings.Join(socksArgs, " "))
 	}
@@ -98,17 +100,17 @@ func NewLinuxBridge(httpProxyPort, socksProxyPort int, debug bool) (*LinuxBridge
 // Cleanup stops the bridge processes and removes socket files.
 func (b *LinuxBridge) Cleanup() {
 	if b.httpProcess != nil && b.httpProcess.Process != nil {
-		b.httpProcess.Process.Kill()
-		b.httpProcess.Wait()
+		_ = b.httpProcess.Process.Kill()
+		_ = b.httpProcess.Wait()
 	}
 	if b.socksProcess != nil && b.socksProcess.Process != nil {
-		b.socksProcess.Process.Kill()
-		b.socksProcess.Wait()
+		_ = b.socksProcess.Process.Kill()
+		_ = b.socksProcess.Wait()
 	}
 
 	// Clean up socket files
-	os.Remove(b.HTTPSocketPath)
-	os.Remove(b.SOCKSSocketPath)
+	_ = os.Remove(b.HTTPSocketPath)
+	_ = os.Remove(b.SOCKSSocketPath)
 
 	if b.debug {
 		fmt.Fprintf(os.Stderr, "[fence:linux] Bridges cleaned up\n")
@@ -127,7 +129,9 @@ func NewReverseBridge(ports []int, debug bool) (*ReverseBridge, error) {
 	}
 
 	id := make([]byte, 8)
-	rand.Read(id)
+	if _, err := rand.Read(id); err != nil {
+		return nil, fmt.Errorf("failed to generate socket ID: %w", err)
+	}
 	socketID := hex.EncodeToString(id)
 
 	tmpDir := os.TempDir()
@@ -147,7 +151,7 @@ func NewReverseBridge(ports []int, debug bool) (*ReverseBridge, error) {
 			fmt.Sprintf("TCP-LISTEN:%d,fork,reuseaddr", port),
 			fmt.Sprintf("UNIX-CONNECT:%s,retry=50,interval=0.1", socketPath),
 		}
-		proc := exec.Command("socat", args...)
+		proc := exec.Command("socat", args...) //nolint:gosec // args constructed from trusted input
 		if debug {
 			fmt.Fprintf(os.Stderr, "[fence:linux] Starting reverse bridge for port %d: socat %s\n", port, strings.Join(args, " "))
 		}
@@ -169,14 +173,14 @@ func NewReverseBridge(ports []int, debug bool) (*ReverseBridge, error) {
 func (b *ReverseBridge) Cleanup() {
 	for _, proc := range b.processes {
 		if proc != nil && proc.Process != nil {
-			proc.Process.Kill()
-			proc.Wait()
+			_ = proc.Process.Kill()
+			_ = proc.Wait()
 		}
 	}
 
 	// Clean up socket files
 	for _, socketPath := range b.SocketPaths {
-		os.Remove(socketPath)
+		_ = os.Remove(socketPath)
 	}
 
 	if b.debug {

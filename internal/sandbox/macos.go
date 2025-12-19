@@ -18,7 +18,9 @@ var sessionSuffix = generateSessionSuffix()
 
 func generateSessionSuffix() string {
 	bytes := make([]byte, 8)
-	rand.Read(bytes)
+	if _, err := rand.Read(bytes); err != nil {
+		panic("failed to generate session suffix: " + err.Error())
+	}
 	return "_" + hex.EncodeToString(bytes)[:9] + "_SBX"
 }
 
@@ -175,7 +177,10 @@ func generateWriteRules(allowPaths, denyPaths []string, allowGitConfig bool, log
 
 	// Combine user-specified and mandatory deny patterns
 	cwd, _ := os.Getwd()
-	allDenyPaths := append(denyPaths, GetMandatoryDenyPatterns(cwd, allowGitConfig)...)
+	mandatoryDeny := GetMandatoryDenyPatterns(cwd, allowGitConfig)
+	allDenyPaths := make([]string, 0, len(denyPaths)+len(mandatoryDeny))
+	allDenyPaths = append(allDenyPaths, denyPaths...)
+	allDenyPaths = append(allDenyPaths, mandatoryDeny...)
 
 	for _, pathPattern := range allDenyPaths {
 		normalized := NormalizePath(pathPattern)

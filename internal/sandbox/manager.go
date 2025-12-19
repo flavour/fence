@@ -60,7 +60,7 @@ func (m *Manager) Initialize() error {
 	m.socksProxy = proxy.NewSOCKSProxy(filter, m.debug, m.monitor)
 	socksPort, err := m.socksProxy.Start()
 	if err != nil {
-		m.httpProxy.Stop()
+		_ = m.httpProxy.Stop()
 		return fmt.Errorf("failed to start SOCKS proxy: %w", err)
 	}
 	m.socksPort = socksPort
@@ -69,8 +69,8 @@ func (m *Manager) Initialize() error {
 	if platform.Detect() == platform.Linux {
 		bridge, err := NewLinuxBridge(m.httpPort, m.socksPort, m.debug)
 		if err != nil {
-			m.httpProxy.Stop()
-			m.socksProxy.Stop()
+			_ = m.httpProxy.Stop()
+			_ = m.socksProxy.Stop()
 			return fmt.Errorf("failed to initialize Linux bridge: %w", err)
 		}
 		m.linuxBridge = bridge
@@ -80,8 +80,8 @@ func (m *Manager) Initialize() error {
 			reverseBridge, err := NewReverseBridge(m.exposedPorts, m.debug)
 			if err != nil {
 				m.linuxBridge.Cleanup()
-				m.httpProxy.Stop()
-				m.socksProxy.Stop()
+				_ = m.httpProxy.Stop()
+				_ = m.socksProxy.Stop()
 				return fmt.Errorf("failed to initialize reverse bridge: %w", err)
 			}
 			m.reverseBridge = reverseBridge
@@ -121,10 +121,10 @@ func (m *Manager) Cleanup() {
 		m.linuxBridge.Cleanup()
 	}
 	if m.httpProxy != nil {
-		m.httpProxy.Stop()
+		_ = m.httpProxy.Stop()
 	}
 	if m.socksProxy != nil {
-		m.socksProxy.Stop()
+		_ = m.socksProxy.Stop()
 	}
 	m.logDebug("Sandbox manager cleaned up")
 }

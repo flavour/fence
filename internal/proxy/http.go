@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -50,7 +51,8 @@ func (p *HTTPProxy) Start() (int, error) {
 
 	p.listener = listener
 	p.server = &http.Server{
-		Handler: http.HandlerFunc(p.handleRequest),
+		Handler:           http.HandlerFunc(p.handleRequest),
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	p.mu.Lock()
@@ -109,7 +111,9 @@ func (p *HTTPProxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 
 	port := 443
 	if portStr != "" {
-		fmt.Sscanf(portStr, "%d", &port)
+		if p, err := strconv.Atoi(portStr); err == nil {
+			port = p
+		}
 	}
 
 	// Check if allowed
@@ -128,7 +132,7 @@ func (p *HTTPProxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad Gateway", http.StatusBadGateway)
 		return
 	}
-	defer targetConn.Close()
+	defer func() { _ = targetConn.Close() }()
 
 	// Hijack the connection
 	hijacker, ok := w.(http.Hijacker)
@@ -142,9 +146,11 @@ func (p *HTTPProxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to hijack connection", http.StatusInternalServerError)
 		return
 	}
-	defer clientConn.Close()
+	defer func() { _ = clientConn.Close() }()
 
-	clientConn.Write([]byte("HTTP/1.1 200 Connection Established\r\n\r\n"))
+	if _, err := clientConn.Write([]byte("HTTP/1.1 200 Connection Established\r\n\r\n")); err != nil {
+		return
+	}
 
 	// Pipe data bidirectionally
 	var wg sync.WaitGroup
@@ -152,12 +158,12 @@ func (p *HTTPProxy) handleConnect(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		defer wg.Done()
-		io.Copy(targetConn, clientConn)
+		_, _ = io.Copy(targetConn, clientConn)
 	}()
 
 	go func() {
 		defer wg.Done()
-		io.Copy(clientConn, targetConn)
+		_, _ = io.Copy(clientConn, targetConn)
 	}()
 
 	wg.Wait()
@@ -175,7 +181,9 @@ func (p *HTTPProxy) handleHTTP(w http.ResponseWriter, r *http.Request) {
 	host := targetURL.Hostname()
 	port := 80
 	if targetURL.Port() != "" {
-		fmt.Sscanf(targetURL.Port(), "%d", &port)
+		if p, err := strconv.Atoi(targetURL.Port()); err == nil {
+			port = p
+		}
 	} else if targetURL.Scheme == "https" {
 		port = 443
 	}
@@ -216,7 +224,7 @@ func (p *HTTPProxy) handleHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad Gateway", http.StatusBadGateway)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Copy response headers
 	for key, values := range resp.Header {
@@ -226,7 +234,7 @@ func (p *HTTPProxy) handleHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body)
+	_, _ = io.Copy(w, resp.Body)
 
 	p.logRequest(r.Method, r.RequestURI, host, resp.StatusCode, "ALLOWED", time.Since(start))
 }
