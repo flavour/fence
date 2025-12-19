@@ -2,10 +2,7 @@
 
 A Go implementation of process sandboxing with network and filesystem restrictions.
 
-**`fence`** wraps arbitrary commands in a security sandbox, blocking network access by default and restricting filesystem operations based on configurable rules.
-
-> [!NOTE]
-> This is still a work in progress and may see significant changes.
+**`fence`** wraps arbitrary commands in a security sandbox, blocking network access by default and restricting filesystem operations based on configurable rules. Useful for AI coding agents, untrusted code execution, or running processes with controlled side effects.
 
 ## Features
 
