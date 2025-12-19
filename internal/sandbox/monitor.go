@@ -42,12 +42,10 @@ func (m *LogMonitor) Start() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	m.cancel = cancel
 
-	// Build predicate to filter for our session's violations
-	// Note: We use the broader "_SBX" suffix to ensure we capture events
-	// even if there's a slight delay in log delivery
-	predicate := `eventMessage ENDSWITH "_SBX"`
+	// Build predicate to filter for this session's violations only
+	predicate := fmt.Sprintf(`eventMessage ENDSWITH "%s"`, m.sessionSuffix)
 
-	m.cmd = exec.CommandContext(ctx, "log", "stream",
+	m.cmd = exec.CommandContext(ctx, "log", "stream", //nolint:gosec // predicate is constructed from trusted session suffix
 		"--predicate", predicate,
 		"--style", "compact",
 	)
