@@ -71,6 +71,8 @@ Create `~/.fence.json` to configure allowed domains and filesystem access:
 | `allowUnixSockets` | List of allowed Unix socket paths (macOS) |
 | `allowAllUnixSockets` | Allow all Unix sockets |
 | `allowLocalBinding` | Allow binding to local ports |
+| `httpProxyPort` | Fixed port for HTTP proxy (default: random available port) |
+| `socksProxyPort` | Fixed port for SOCKS5 proxy (default: random available port) |
 
 ### Filesystem Configuration
 
@@ -81,10 +83,16 @@ Create `~/.fence.json` to configure allowed domains and filesystem access:
 | `denyWrite` | Paths to deny writing (takes precedence) |
 | `allowGitConfig` | Allow writes to `.git/config` files |
 
+### Other Options
+
+| Field | Description |
+|-------|-------------|
+| `allowPty` | Allow pseudo-terminal (PTY) allocation in the sandbox (for MacOS) |
+
 ## CLI Usage
 
 ```text
-fence [flags] [command...]
+fence [flags] -- [command...]
 
 Flags:
   -c string        Run command string directly (like sh -c)
@@ -92,6 +100,7 @@ Flags:
   -m, --monitor    Monitor mode (shows blocked requests and violations only)
   -p, --port       Expose port for inbound connections (can be repeated)
   -s, --settings   Path to settings file (default: ~/.fence.json)
+  -v, --version    Show version information
   -h, --help       Help for fence
 ```
 

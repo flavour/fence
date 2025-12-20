@@ -53,6 +53,7 @@ Handles loading and validating sandbox configuration:
 type Config struct {
     Network    NetworkConfig    // Domain allow/deny lists
     Filesystem FilesystemConfig // Read/write restrictions
+    AllowPty   bool             // Allow pseudo-terminal allocation
 }
 ```
 
@@ -287,7 +288,7 @@ Linux uses network namespace isolation (`--unshare-net`), which prevents connect
 With `-m` on Linux, you only see proxy-level denials:
 
 ```text
-[fence:http] 14:30:01 ✗ CONNECT 403 evil.com (blocked by proxy)
+[fence:http] 14:30:01 ✗ CONNECT 403 evil.com https://evil.com:443 (0s)
 [fence:socks] 14:30:02 ✗ CONNECT evil.com:22 BLOCKED
 ```
 
@@ -326,11 +327,17 @@ Access control follows a deny-by-default model for writes:
 
 Certain paths are always protected from writes regardless of config to prevent common attack vectors:
 
-- Shell configs: `.bashrc`, `.zshrc`, `.profile`, `.bash_profile`
+**Protected files:**
+
+- Shell configs: `.bashrc`, `.bash_profile`, `.zshrc`, `.zprofile`, `.profile`
+- Git config: `.gitconfig`, `.gitmodules`, `.git/config` (can define aliases that run code)
 - Git hooks: `.git/hooks/*` (can execute arbitrary code on git operations)
-- Git config: `.gitconfig`, `.git/config` (can define aliases that run code)
-- SSH config: `.ssh/config`, `.ssh/authorized_keys`
-- Editor configs that can execute code: `.vimrc`, `.emacs`
+- Tool configs: `.ripgreprc`, `.mcp.json`
+
+**Protected directories:**
+
+- IDE/editor settings: `.vscode`, `.idea`
+- Claude agent configs: `.claude/commands`, `.claude/agents`
 
 #### Process Isolation
 
