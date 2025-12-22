@@ -71,6 +71,7 @@ Create `~/.fence.json` to configure allowed domains and filesystem access:
 | `allowUnixSockets` | List of allowed Unix socket paths (macOS) |
 | `allowAllUnixSockets` | Allow all Unix sockets |
 | `allowLocalBinding` | Allow binding to local ports |
+| `allowLocalOutbound` | Allow outbound connections to localhost, e.g., local DBs (defaults to `allowLocalBinding` if not set) |
 | `httpProxyPort` | Fixed port for HTTP proxy (default: random available port) |
 | `socksProxyPort` | Fixed port for SOCKS5 proxy (default: random available port) |
 
@@ -138,6 +139,12 @@ import (
 )
 
 func main() {
+    // Check if platform supports sandboxing (macOS/Linux)
+    if !fence.IsSupported() {
+        fmt.Println("Sandboxing not supported on this platform")
+        return
+    }
+
     // Create config
     cfg := &fence.Config{
         Network: fence.NetworkConfig{

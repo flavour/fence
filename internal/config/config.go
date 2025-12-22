@@ -25,6 +25,7 @@ type NetworkConfig struct {
 	AllowUnixSockets    []string `json:"allowUnixSockets,omitempty"`
 	AllowAllUnixSockets bool     `json:"allowAllUnixSockets,omitempty"`
 	AllowLocalBinding   bool     `json:"allowLocalBinding,omitempty"`
+	AllowLocalOutbound  *bool    `json:"allowLocalOutbound,omitempty"` // If nil, defaults to AllowLocalBinding value
 	HTTPProxyPort       int      `json:"httpProxyPort,omitempty"`
 	SOCKSProxyPort      int      `json:"socksProxyPort,omitempty"`
 }

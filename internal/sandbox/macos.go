@@ -33,6 +33,7 @@ type MacOSSandboxParams struct {
 	AllowUnixSockets        []string
 	AllowAllUnixSockets     bool
 	AllowLocalBinding       bool
+	AllowLocalOutbound      bool
 	ReadDenyPaths           []string
 	WriteAllowPaths         []string
 	WriteDenyPaths          []string
@@ -419,10 +420,15 @@ func GenerateSandboxProfile(params MacOSSandboxParams) string {
 		profile.WriteString("(allow network*)\n")
 	} else {
 		if params.AllowLocalBinding {
+			// Allow binding and inbound connections on localhost (for servers)
 			profile.WriteString(`(allow network-bind (local ip "localhost:*"))
 (allow network-inbound (local ip "localhost:*"))
-(allow network-outbound (local ip "localhost:*"))
 `)
+			// Process can make outbound connections to localhost
+			if params.AllowLocalOutbound {
+				profile.WriteString(`(allow network-outbound (local ip "localhost:*"))
+`)
+			}
 		}
 
 		if params.AllowAllUnixSockets {
@@ -492,6 +498,11 @@ func WrapCommandMacOS(cfg *config.Config, command string, httpPort, socksPort in
 	// Enable local binding if ports are exposed or if explicitly configured
 	allowLocalBinding := cfg.Network.AllowLocalBinding || len(exposedPorts) > 0
 
+	allowLocalOutbound := allowLocalBinding
+	if cfg.Network.AllowLocalOutbound != nil {
+		allowLocalOutbound = *cfg.Network.AllowLocalOutbound
+	}
+
 	params := MacOSSandboxParams{
 		Command:                 command,
 		NeedsNetworkRestriction: needsNetwork || len(cfg.Network.AllowedDomains) == 0, // Block if no domains allowed
@@ -500,6 +511,7 @@ func WrapCommandMacOS(cfg *config.Config, command string, httpPort, socksPort in
 		AllowUnixSockets:        cfg.Network.AllowUnixSockets,
 		AllowAllUnixSockets:     cfg.Network.AllowAllUnixSockets,
 		AllowLocalBinding:       allowLocalBinding,
+		AllowLocalOutbound:      allowLocalOutbound,
 		ReadDenyPaths:           cfg.Filesystem.DenyRead,
 		WriteAllowPaths:         allowPaths,
 		WriteDenyPaths:          cfg.Filesystem.DenyWrite,
@@ -509,6 +521,9 @@ func WrapCommandMacOS(cfg *config.Config, command string, httpPort, socksPort in
 
 	if debug && len(exposedPorts) > 0 {
 		fmt.Fprintf(os.Stderr, "[fence:macos] Enabling local binding for exposed ports: %v\n", exposedPorts)
+	}
+	if debug && allowLocalBinding && !allowLocalOutbound {
+		fmt.Fprintf(os.Stderr, "[fence:macos] Blocking localhost outbound (AllowLocalOutbound=false)\n")
 	}
 
 	profile := GenerateSandboxProfile(params)

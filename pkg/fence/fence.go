@@ -3,8 +3,14 @@ package fence
 
 import (
 	"github.com/Use-Tusk/fence/internal/config"
+	"github.com/Use-Tusk/fence/internal/platform"
 	"github.com/Use-Tusk/fence/internal/sandbox"
 )
+
+// IsSupported returns true if the current platform supports sandboxing (macOS/Linux).
+func IsSupported() bool {
+	return platform.IsSupported()
+}
 
 // Config is the configuration for fence.
 type Config = config.Config
