@@ -1,8 +1,8 @@
 # Security Model
 
-Fence is intended as **defense-in-depth** for running semi-trusted commands with reduced side effects (package installs, build scripts, CI jobs, unfamiliar repos).
+Fence is intended as defense-in-depth for running semi-trusted commands with reduced side effects (package installs, build scripts, CI jobs, unfamiliar repos).
 
-It is **not** designed to be a strong isolation boundary against actively malicious code that is attempting to escape.
+It is not designed to be a strong isolation boundary against actively malicious code that is attempting to escape.
 
 ## Threat model (what Fence helps with)
 
@@ -21,16 +21,16 @@ Fence is useful when you want to reduce risk from:
 - **Allowlisting by domain**: you can specify `allowedDomains` (with wildcard support like `*.example.com`).
 - **Localhost controls**: inbound binding and localhost outbound are separately controlled.
 
-Important: domain filtering does **not** inspect content. If you allow a domain, code can exfiltrate via that domain.
+Important: domain filtering does not inspect content. If you allow a domain, code can exfiltrate via that domain.
 
-#### How allowlisting works (important nuance)
+#### How allowlisting works
 
-Fence combines **OS-level enforcement** with **proxy-based allowlisting**:
+Fence combines OS-level enforcement with proxy-based allowlisting:
 
-- The OS sandbox / network namespace is expected to block **direct outbound** connections.
+- The OS sandbox / network namespace is expected to block direct outbound connections.
 - Domain allowlisting happens via local HTTP/SOCKS proxies and proxy environment variables (`HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`).
 
-If a program does not use proxy env vars (or uses a custom protocol/stack), it may **not benefit from domain allowlisting**. In that case it typically fails with connection errors rather than being "selectively allowed."
+If a program does not use proxy env vars (or uses a custom protocol/stack), it may not benefit from domain allowlisting. In that case it typically fails with connection errors rather than being "selectively allowed."
 
 Localhost is separate from "external domains":
 
@@ -57,7 +57,7 @@ Localhost is separate from "external domains":
 
 ### Practical examples of proxy limitations
 
-The proxy approach works well for many tools (curl, wget, git, npm, pip), but **not by default** for some stacks:
+The proxy approach works well for many tools (curl, wget, git, npm, pip), but not by default for some stacks:
 
 - Node.js native `http`/`https` (use a proxy-aware client, e.g. `undici` + `ProxyAgent`)
 - Raw socket connections (custom TCP/UDP protocols)

@@ -6,10 +6,10 @@ Common situations:
 
 - Running `npm install`, `pip install`, or `cargo build` in an unfamiliar repo
 - Executing build scripts or test runners that can read/write broadly and make network calls
-- Running CI jobs where you want **default-deny egress** and **tightly scoped writes**
+- Running CI jobs where you want default-deny egress and tightly scoped writes
 - Auditing what a command *tries* to do before you let it do it
 
-Fence is intentionally simple: it focuses on **network allowlisting** (by domain) and **filesystem write restrictions** (by path), wrapped in a pragmatic OS sandbox (macOS `sandbox-exec`, Linux `bubblewrap`).
+Fence is intentionally simple: it focuses on network allowlisting (by domain) and filesystem write restrictions (by path), wrapped in a pragmatic OS sandbox (macOS `sandbox-exec`, Linux `bubblewrap`).
 
 ## What problem does it solve?
 

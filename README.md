@@ -20,6 +20,7 @@ You can use Fence as a Go package or CLI tool.
 ## Documentation
 
 - [Documentation index](docs/)
+- [Configuration](docs/configuration.md)
 - [Security model](docs/security-model.md)
 - [Architecture](ARCHITECTURE.md)
 - [Examples](examples/)
