@@ -76,7 +76,9 @@ func (m *Manager) Initialize() error {
 		m.linuxBridge = bridge
 
 		// Set up reverse bridge for exposed ports (inbound connections)
-		if len(m.exposedPorts) > 0 {
+		// Only needed when network namespace is available - otherwise they share the network
+		features := DetectLinuxFeatures()
+		if len(m.exposedPorts) > 0 && features.CanUnshareNet {
 			reverseBridge, err := NewReverseBridge(m.exposedPorts, m.debug)
 			if err != nil {
 				m.linuxBridge.Cleanup()
@@ -85,6 +87,8 @@ func (m *Manager) Initialize() error {
 				return fmt.Errorf("failed to initialize reverse bridge: %w", err)
 			}
 			m.reverseBridge = reverseBridge
+		} else if len(m.exposedPorts) > 0 && m.debug {
+			m.logDebug("Skipping reverse bridge (no network namespace, ports accessible directly)")
 		}
 	}
 

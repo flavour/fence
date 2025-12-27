@@ -433,10 +433,16 @@ func WrapCommandLinuxWithOptions(cfg *config.Config, command string, bridge *Lin
 	// Skip Landlock wrapper if executable is in /tmp (test binaries are built there)
 	// The wrapper won't work because --tmpfs /tmp hides the test binary
 	executableInTmp := strings.HasPrefix(fenceExePath, "/tmp/")
-	useLandlockWrapper := opts.UseLandlock && features.CanUseLandlock() && fenceExePath != "" && !executableInTmp
+	// Skip Landlock wrapper if fence is being used as a library (executable is not fence)
+	// The wrapper re-executes the binary with --landlock-apply, which only fence understands
+	executableIsFence := strings.Contains(filepath.Base(fenceExePath), "fence")
+	useLandlockWrapper := opts.UseLandlock && features.CanUseLandlock() && fenceExePath != "" && !executableInTmp && executableIsFence
 
 	if opts.Debug && executableInTmp {
 		fmt.Fprintf(os.Stderr, "[fence:linux] Skipping Landlock wrapper (executable in /tmp, likely a test)\n")
+	}
+	if opts.Debug && !executableIsFence {
+		fmt.Fprintf(os.Stderr, "[fence:linux] Skipping Landlock wrapper (running as library, not fence CLI)\n")
 	}
 
 	bwrapArgs = append(bwrapArgs, "--", shellPath, "-c")
