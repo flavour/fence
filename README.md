@@ -193,4 +193,4 @@ func main() {
 
 ## Attribution
 
-Portions of this project are derived from Anthropic's [sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime) (Apache-2.0). This repository contains modifications and additional original work.
+This project was inspired by Anthropic's [sandbox-runtime](https://github.com/anthropic-experimental/sandbox-runtime).
