@@ -200,7 +200,8 @@ func (f *LinuxFeatures) detectNetworkNamespace() {
 
 	// Run a minimal bwrap command with --unshare-net to test if it works
 	// We use a very short timeout since this should either succeed or fail immediately
-	cmd := exec.Command("bwrap", "--unshare-net", "--", "/bin/true")
+	// The bind mount is required in some environments
+	cmd := exec.Command("bwrap", "--unshare-net", "--ro-bind", "/", "/", "--", "/bin/true")
 	err := cmd.Run()
 	f.CanUnshareNet = err == nil
 }
