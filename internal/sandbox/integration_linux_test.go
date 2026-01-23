@@ -228,6 +228,44 @@ func TestLinux_LandlockAllowsTmpFence(t *testing.T) {
 	assertFileExists(t, testFile)
 }
 
+// TestLinux_DenyReadBlocksFiles verifies that denyRead correctly blocks file access.
+// This test ensures that when denyRead contains file paths (not directories),
+// sandbox is properly set up and denies read access.
+func TestLinux_DenyReadBlocksFiles(t *testing.T) {
+	skipIfAlreadySandboxed(t)
+
+	workspace := createTempWorkspace(t)
+	secretFile := createTestFile(t, workspace, "secret.txt", "secret content")
+
+	cfg := testConfigWithWorkspace(workspace)
+	cfg.Filesystem.DenyRead = []string{secretFile}
+
+	result := runUnderSandbox(t, cfg, "cat "+secretFile, workspace)
+
+	// File should be blocked (cannot be read)
+	assertBlocked(t, result)
+}
+
+// TestLinux_DenyReadBlocksDirectories verifies that denyRead correctly blocks directory access.
+func TestLinux_DenyReadBlocksDirectories(t *testing.T) {
+	skipIfAlreadySandboxed(t)
+
+	workspace := createTempWorkspace(t)
+	secretDir := filepath.Join(workspace, "secret-dir")
+	if err := os.MkdirAll(secretDir, 0o750); err != nil {
+		t.Fatalf("failed to create secret directory: %v", err)
+	}
+	secretFile := createTestFile(t, secretDir, "data.txt", "secret data")
+
+	cfg := testConfigWithWorkspace(workspace)
+	cfg.Filesystem.DenyRead = []string{secretDir}
+
+	result := runUnderSandbox(t, cfg, "cat "+secretFile, workspace)
+
+	// Directory should be blocked (cannot read files inside)
+	assertBlocked(t, result)
+}
+
 // ============================================================================
 // Network Blocking Tests
 // ============================================================================

@@ -3,6 +3,7 @@ package sandbox
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -63,6 +64,15 @@ func skipIfCommandNotFound(t *testing.T, cmd string) {
 // assertBlocked verifies that a command was blocked by the sandbox.
 func assertBlocked(t *testing.T, result *SandboxTestResult) {
 	t.Helper()
+	// Check for initialization failures
+	// ExitError means the command ran but failed (non-zero exit code), not an initialization failure
+	if result.Error != nil && !strings.Contains(result.Error.Error(), "blocked") {
+		if _, isExitErr := result.Error.(*exec.ExitError); !isExitErr {
+			t.Errorf("sandbox initialization failed: %v", result.Error)
+		}
+	}
+
+	// Verify command was actually blocked
 	if result.Succeeded() {
 		t.Errorf("expected command to be blocked, but it succeeded\nstdout: %s\nstderr: %s",
 			result.Stdout, result.Stderr)
@@ -72,6 +82,12 @@ func assertBlocked(t *testing.T, result *SandboxTestResult) {
 // assertAllowed verifies that a command was allowed and succeeded.
 func assertAllowed(t *testing.T, result *SandboxTestResult) {
 	t.Helper()
+	// Check for initialization failures
+	if result.Error != nil {
+		t.Errorf("sandbox initialization failed: %v", result.Error)
+	}
+
+	// Verify command succeeded
 	if result.Failed() {
 		t.Errorf("expected command to succeed, but it failed with exit code %d\nstdout: %s\nstderr: %s\nerror: %v",
 			result.ExitCode, result.Stdout, result.Stderr, result.Error)
@@ -251,6 +267,7 @@ func executeShellCommandWithTimeout(t *testing.T, command string, workDir string
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			result.ExitCode = exitErr.ExitCode()
+			result.Error = exitErr
 		} else {
 			result.Error = err
 			result.ExitCode = -1
@@ -482,4 +499,19 @@ func TestIntegration_EnvWorks(t *testing.T) {
 
 	assertAllowed(t, result)
 	assertContains(t, result.Stdout, "FENCE_SANDBOX=1")
+}
+
+func TestExecuteShellCommandBwrapError(t *testing.T) {
+	skipIfAlreadySandboxed(t)
+	skipIfCommandNotFound(t, "bwrap")
+
+	workspace := createTempWorkspace(t)
+	testFile := createTestFile(t, workspace, "testfile.txt", "test content")
+
+	bwrapCmd := fmt.Sprintf("bwrap --ro-bind / / --tmpfs %s -- /bin/true", testFile)
+
+	result := executeShellCommand(t, bwrapCmd, workspace)
+	if result.Error == nil || result.ExitCode == 0 {
+		t.Errorf("expected command to fail with an error")
+	}
 }
