@@ -176,3 +176,70 @@ func TestMacOS_ProfileNetworkSection(t *testing.T) {
 		})
 	}
 }
+
+// TestExpandMacOSTmpPaths verifies that /tmp and /private/tmp paths are properly mirrored.
+func TestExpandMacOSTmpPaths(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []string
+		want  []string
+	}{
+		{
+			name:  "mirrors /tmp to /private/tmp",
+			input: []string{".", "/tmp"},
+			want:  []string{".", "/tmp", "/private/tmp"},
+		},
+		{
+			name:  "mirrors /private/tmp to /tmp",
+			input: []string{".", "/private/tmp"},
+			want:  []string{".", "/private/tmp", "/tmp"},
+		},
+		{
+			name:  "no change when both present",
+			input: []string{".", "/tmp", "/private/tmp"},
+			want:  []string{".", "/tmp", "/private/tmp"},
+		},
+		{
+			name:  "no change when neither present",
+			input: []string{".", "~/.cache"},
+			want:  []string{".", "~/.cache"},
+		},
+		{
+			name:  "mirrors /tmp/fence to /private/tmp/fence",
+			input: []string{".", "/tmp/fence"},
+			want:  []string{".", "/tmp/fence", "/private/tmp/fence"},
+		},
+		{
+			name:  "mirrors /private/tmp/fence to /tmp/fence",
+			input: []string{".", "/private/tmp/fence"},
+			want:  []string{".", "/private/tmp/fence", "/tmp/fence"},
+		},
+		{
+			name:  "mirrors nested subdirectory",
+			input: []string{".", "/tmp/foo/bar"},
+			want:  []string{".", "/tmp/foo/bar", "/private/tmp/foo/bar"},
+		},
+		{
+			name:  "no duplicate when mirror already present",
+			input: []string{".", "/tmp/fence", "/private/tmp/fence"},
+			want:  []string{".", "/tmp/fence", "/private/tmp/fence"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := expandMacOSTmpPaths(tt.input)
+
+			if len(got) != len(tt.want) {
+				t.Errorf("expandMacOSTmpPaths() = %v, want %v", got, tt.want)
+				return
+			}
+
+			for i, v := range got {
+				if v != tt.want[i] {
+					t.Errorf("expandMacOSTmpPaths()[%d] = %v, want %v", i, v, tt.want[i])
+				}
+			}
+		})
+	}
+}

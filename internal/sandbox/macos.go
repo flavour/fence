@@ -84,6 +84,38 @@ func getAncestorDirectories(pathStr string) []string {
 	return ancestors
 }
 
+// expandMacOSTmpPaths mirrors /tmp paths to /private/tmp equivalents and vice versa.
+// On macOS, /tmp is a symlink to /private/tmp, and symlink resolution can fail if paths
+// don't exist yet. Adding both variants ensures sandbox rules match kernel-resolved paths.
+func expandMacOSTmpPaths(paths []string) []string {
+	seen := make(map[string]bool)
+	for _, p := range paths {
+		seen[p] = true
+	}
+
+	var additions []string
+	for _, p := range paths {
+		var mirror string
+		switch {
+		case p == "/tmp":
+			mirror = "/private/tmp"
+		case p == "/private/tmp":
+			mirror = "/tmp"
+		case strings.HasPrefix(p, "/tmp/"):
+			mirror = "/private" + p
+		case strings.HasPrefix(p, "/private/tmp/"):
+			mirror = strings.TrimPrefix(p, "/private")
+		}
+
+		if mirror != "" && !seen[mirror] {
+			seen[mirror] = true
+			additions = append(additions, mirror)
+		}
+	}
+
+	return append(paths, additions...)
+}
+
 // getTmpdirParent gets the TMPDIR parent if it matches macOS pattern.
 func getTmpdirParent() []string {
 	tmpdir := os.Getenv("TMPDIR")
@@ -504,6 +536,9 @@ func WrapCommandMacOS(cfg *config.Config, command string, httpPort, socksPort in
 
 	// Build allow paths: default + configured
 	allowPaths := append(GetDefaultWritePaths(), cfg.Filesystem.AllowWrite...)
+
+	// Expand /tmp <-> /private/tmp for macOS symlink compatibility
+	allowPaths = expandMacOSTmpPaths(allowPaths)
 
 	// Enable local binding if ports are exposed or if explicitly configured
 	allowLocalBinding := cfg.Network.AllowLocalBinding || len(exposedPorts) > 0
