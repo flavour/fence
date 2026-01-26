@@ -23,6 +23,8 @@ fence -c "rm -rf /"  # → blocked by command deny rules
 
 ## Install
 
+**macOS / Linux:**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Use-Tusk/fence/main/install.sh | sh
 ```
