@@ -35,6 +35,8 @@ type MacOSSandboxParams struct {
 	AllowAllUnixSockets     bool
 	AllowLocalBinding       bool
 	AllowLocalOutbound      bool
+	DefaultDenyRead         bool
+	ReadAllowPaths          []string
 	ReadDenyPaths           []string
 	WriteAllowPaths         []string
 	WriteDenyPaths          []string
@@ -143,13 +145,54 @@ func getTmpdirParent() []string {
 }
 
 // generateReadRules generates filesystem read rules for the sandbox profile.
-func generateReadRules(denyPaths []string, logTag string) []string {
+func generateReadRules(defaultDenyRead bool, allowPaths, denyPaths []string, logTag string) []string {
 	var rules []string
 
-	// Allow all reads by default
-	rules = append(rules, "(allow file-read*)")
+	if defaultDenyRead {
+		// When defaultDenyRead is enabled:
+		// 1. Allow file-read-metadata globally (needed for directory traversal, stat, etc.)
+		// 2. Allow file-read-data only for system paths + user-specified allowRead paths
+		// This lets programs see what files exist but not read their contents.
 
-	// Deny specific paths
+		// Allow metadata operations globally (stat, readdir, etc.) and root dir (for path resolution)
+		rules = append(rules, "(allow file-read-metadata)")
+		rules = append(rules, `(allow file-read-data (literal "/"))`)
+
+		// Allow reading data from essential system paths
+		for _, systemPath := range GetDefaultReadablePaths() {
+			rules = append(rules,
+				"(allow file-read-data",
+				fmt.Sprintf("  (subpath %s))", escapePath(systemPath)),
+			)
+		}
+
+		// Allow reading data from user-specified paths
+		for _, pathPattern := range allowPaths {
+			normalized := NormalizePath(pathPattern)
+
+			if ContainsGlobChars(normalized) {
+				regex := GlobToRegex(normalized)
+				rules = append(rules,
+					"(allow file-read-data",
+					fmt.Sprintf("  (regex %s))", escapePath(regex)),
+				)
+			} else {
+				rules = append(rules,
+					"(allow file-read-data",
+					fmt.Sprintf("  (subpath %s))", escapePath(normalized)),
+				)
+			}
+		}
+	} else {
+		// Allow all reads by default
+		rules = append(rules, "(allow file-read*)")
+	}
+
+	// In both modes, deny specific paths (denyRead takes precedence).
+	// Note: We use file-read* (not file-read-data) so denied paths are fully hidden.
+	// In defaultDenyRead mode, this overrides the global file-read-metadata allow,
+	// meaning denied paths can't even be listed or stat'd - more restrictive than
+	// default mode where denied paths are still visible but unreadable.
 	for _, pathPattern := range denyPaths {
 		normalized := NormalizePath(pathPattern)
 
@@ -494,7 +537,7 @@ func GenerateSandboxProfile(params MacOSSandboxParams) string {
 
 	// Read rules
 	profile.WriteString("; File read\n")
-	for _, rule := range generateReadRules(params.ReadDenyPaths, logTag) {
+	for _, rule := range generateReadRules(params.DefaultDenyRead, params.ReadAllowPaths, params.ReadDenyPaths, logTag) {
 		profile.WriteString(rule + "\n")
 	}
 	profile.WriteString("\n")
@@ -566,6 +609,8 @@ func WrapCommandMacOS(cfg *config.Config, command string, httpPort, socksPort in
 		AllowAllUnixSockets:     cfg.Network.AllowAllUnixSockets,
 		AllowLocalBinding:       allowLocalBinding,
 		AllowLocalOutbound:      allowLocalOutbound,
+		DefaultDenyRead:         cfg.Filesystem.DefaultDenyRead,
+		ReadAllowPaths:          cfg.Filesystem.AllowRead,
 		ReadDenyPaths:           cfg.Filesystem.DenyRead,
 		WriteAllowPaths:         allowPaths,
 		WriteDenyPaths:          cfg.Filesystem.DenyWrite,
