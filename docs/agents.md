@@ -49,9 +49,10 @@ You can use it like `fence -t code -- claude`.
 |-------|--------| ----- |
 | Claude Code | `code` | - |
 | Codex | `code` | - |
-| Cursor Agent | `code-relaxed` | Node.js/undici doesn't respect HTTP_PROXY |
 | Gemini CLI | `code` | - |
 | OpenCode | `code` | - |
+| Droid | `code` | - |
+| Cursor Agent | `code-relaxed` | Node.js/undici doesn't respect HTTP_PROXY |
 
 These configs can drift as agents evolve. If you encounter false positives on blocked requests or want a CLI agent listed, please open an issue or PR.
 

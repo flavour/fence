@@ -18,6 +18,10 @@
       "opencode.ai",
       "api.opencode.ai",
 
+      // Factory CLI (droid)
+      "*.factory.ai",
+      "api.workos.com",
+
       // Cursor API
       "*.cursor.sh",
 
@@ -83,6 +87,9 @@
 
       // Gemini CLI
       "~/.gemini/**",
+
+      // Factory CLI (droid)
+      "~/.factory/**",
 
       // Package manager caches
       "~/.npm/_cacache",
