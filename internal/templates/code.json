@@ -176,7 +176,31 @@
       "gem push",
 
       // Privilege escalation
-      "sudo"
+      "sudo",
+
+      // GitHub CLI commands that modify remote state
+      "gh pr create",
+      "gh pr merge",
+      "gh pr close",
+      "gh pr reopen",
+      "gh pr review",
+      "gh pr comment",
+      "gh release create",
+      "gh release delete",
+      "gh repo create",
+      "gh repo fork",
+      "gh repo delete",
+      "gh issue create",
+      "gh issue close",
+      "gh issue comment",
+      "gh gist create",
+      "gh workflow run",
+      "gh api",
+      "gh auth login",
+      "gh secret set",
+      "gh secret delete",
+      "gh variable set",
+      "gh variable delete"
     ]
   }
 }
