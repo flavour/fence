@@ -481,9 +481,13 @@ func WrapCommandLinuxWithOptions(cfg *config.Config, command string, bridge *Lin
 	// Note: We only use concrete paths from getMandatoryDenyPaths(), NOT glob expansion.
 	// GetMandatoryDenyPatterns() returns expensive **/pattern globs that require walking
 	// the entire directory tree - this can hang on large directories (see issue #27).
-	// The concrete paths already cover dangerous files in cwd and home directory,
-	// which is sufficient protection for bwrap's --ro-bind. Landlock (applied separately
-	// via the wrapper) provides additional recursive protection.
+	//
+	// The concrete paths cover dangerous files in cwd and home directory. Files like
+	// .bashrc in subdirectories are not protected, but this may be lower-risk since shell
+	// rc files in project subdirectories are uncommon and not automatically sourced.
+	//
+	// TODO: consider depth-limited glob expansion (e.g., max 3 levels) to protect
+	// subdirectory dangerous files without full tree walks that hang on large dirs.
 	mandatoryDeny := getMandatoryDenyPaths(cwd)
 
 	// Deduplicate
