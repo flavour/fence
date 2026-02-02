@@ -477,13 +477,14 @@ func WrapCommandLinuxWithOptions(cfg *config.Config, command string, bridge *Lin
 
 	// Apply mandatory deny patterns (make dangerous files/dirs read-only)
 	// This overrides any writable mounts for these paths
+	//
+	// Note: We only use concrete paths from getMandatoryDenyPaths(), NOT glob expansion.
+	// GetMandatoryDenyPatterns() returns expensive **/pattern globs that require walking
+	// the entire directory tree - this can hang on large directories (see issue #27).
+	// The concrete paths already cover dangerous files in cwd and home directory,
+	// which is sufficient protection for bwrap's --ro-bind. Landlock (applied separately
+	// via the wrapper) provides additional recursive protection.
 	mandatoryDeny := getMandatoryDenyPaths(cwd)
-
-	// Expand glob patterns for mandatory deny
-	allowGitConfig := cfg != nil && cfg.Filesystem.AllowGitConfig
-	mandatoryGlobs := GetMandatoryDenyPatterns(cwd, allowGitConfig)
-	expandedMandatory := ExpandGlobPatterns(mandatoryGlobs)
-	mandatoryDeny = append(mandatoryDeny, expandedMandatory...)
 
 	// Deduplicate
 	seen := make(map[string]bool)
