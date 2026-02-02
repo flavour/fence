@@ -8,8 +8,6 @@
 
 Fence wraps commands in a sandbox that blocks network access by default and restricts filesystem operations based on configurable rules. It's most useful for running semi-trusted code (package installs, build scripts, CI jobs, unfamiliar repos) with controlled side effects, and it can also complement AI coding agents as defense-in-depth.
 
-You can also think of Fence as a permission manager for your CLI agents.
-
 ```bash
 # Block all network access (default)
 fence curl https://example.com  # → 403 Forbidden
@@ -20,6 +18,8 @@ fence -t code npm install  # → uses 'code' template with npm/pypi/etc allowed
 # Block dangerous commands
 fence -c "rm -rf /"  # → blocked by command deny rules
 ```
+
+You can also think of Fence as a permission manager for your CLI agents. **Fence works with popular coding agents like Claude Code, Codex, Gemini CLI, Cursor Agent, OpenCode, Factory (Droid) CLI, etc.** See [agents.md](./docs/agents.md) for more details.
 
 ## Install
 
