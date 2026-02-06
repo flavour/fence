@@ -136,7 +136,7 @@ func runCommand(cmd *cobra.Command, args []string) error {
 	case cmdString != "":
 		command = cmdString
 	case len(args) > 0:
-		command = strings.Join(args, " ")
+		command = sandbox.ShellQuote(args)
 	default:
 		return fmt.Errorf("no command specified. Use -c <command> or provide command arguments")
 	}
