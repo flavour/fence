@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/Use-Tusk/fence/internal/config"
@@ -239,6 +240,37 @@ func canMountOver(path string) bool {
 	return fileExists(path)
 }
 
+// sameDevice returns true if both paths reside on the same filesystem (device).
+func sameDevice(path1, path2 string) bool {
+	var s1, s2 syscall.Stat_t
+	if syscall.Stat(path1, &s1) != nil || syscall.Stat(path2, &s2) != nil {
+		return true // err on the side of caution
+	}
+	return s1.Dev == s2.Dev
+}
+
+// intermediaryDirs returns the chain of directories between root and targetDir,
+// from shallowest to deepest. Used to create --dir entries so bwrap can set up
+// mount points inside otherwise-empty mount-point stubs.
+//
+// Example: intermediaryDirs("/", "/run/systemd/resolve") ->
+//
+//	["/run", "/run/systemd", "/run/systemd/resolve"]
+func intermediaryDirs(root, targetDir string) []string {
+	rel, err := filepath.Rel(root, targetDir)
+	if err != nil {
+		return []string{targetDir}
+	}
+	parts := strings.Split(rel, string(filepath.Separator))
+	dirs := make([]string, 0, len(parts))
+	current := root
+	for _, part := range parts {
+		current = filepath.Join(current, part)
+		dirs = append(dirs, current)
+	}
+	return dirs
+}
+
 // getMandatoryDenyPaths returns concrete paths (not globs) that must be protected.
 // This expands the glob patterns from GetMandatoryDenyPatterns into real paths.
 func getMandatoryDenyPaths(cwd string) []string {
@@ -414,13 +446,52 @@ func WrapCommandLinuxWithOptions(cfg *config.Config, command string, bridge *Lin
 	// Ensure /etc/resolv.conf is readable inside the sandbox.
 	// On some systems (e.g., WSL), /etc/resolv.conf is a symlink to a path
 	// on a separate mount point (e.g., /mnt/wsl/resolv.conf) that isn't
-	// reachable after --ro-bind / / (non-recursive bind). We resolve the
-	// symlink and bind the real file directly so DNS resolution works.
+	// reachable after --ro-bind / / (non-recursive bind). When the target
+	// is on a different filesystem, we create intermediate directories and
+	// bind the real file at its original location so the symlink resolves.
 	if target, err := filepath.EvalSymlinks("/etc/resolv.conf"); err == nil && target != "/etc/resolv.conf" {
-		if fileExists(target) {
-			bwrapArgs = append(bwrapArgs, "--ro-bind", target, "/etc/resolv.conf")
+		// Skip targets under specially-mounted dirs — a --tmpfs there would
+		// overwrite the --dev-bind or --proc mounts established above.
+		targetUnderSpecialMount := strings.HasPrefix(target, "/dev/") ||
+			strings.HasPrefix(target, "/proc/") ||
+			strings.HasPrefix(target, "/tmp/")
+		// In defaultDenyRead mode, also skip if the target is under a path
+		// already individually bound (e.g., /run, /sys) — a --tmpfs would
+		// overwrite that explicit bind. Targets under unbound paths like
+		// /mnt/wsl still need the fix.
+		if defaultDenyRead {
+			for _, p := range GetDefaultReadablePaths() {
+				if strings.HasPrefix(target, p+"/") {
+					targetUnderSpecialMount = true
+					break
+				}
+			}
+		}
+		if fileExists(target) && !sameDevice("/", target) && !targetUnderSpecialMount {
+			// Make the symlink target reachable by creating its parent dirs.
+			// Walk down from / to the target's parent: skip dirs on the root
+			// device (they have real content like /mnt/c, /mnt/d on WSL),
+			// apply --tmpfs at the mount boundary (first dir on a different
+			// device — an empty mount-point stub safe to replace), then --dir
+			// for any deeper subdirectories inside the now-writable tmpfs.
+			targetDir := filepath.Dir(target)
+			mountBoundaryFound := false
+			for _, dir := range intermediaryDirs("/", targetDir) {
+				if !mountBoundaryFound {
+					if !sameDevice("/", dir) {
+						bwrapArgs = append(bwrapArgs, "--tmpfs", dir)
+						mountBoundaryFound = true
+					}
+					// skip dirs still on root device
+				} else {
+					bwrapArgs = append(bwrapArgs, "--dir", dir)
+				}
+			}
+			if mountBoundaryFound {
+				bwrapArgs = append(bwrapArgs, "--ro-bind", target, target)
+			}
 			if opts.Debug {
-				fmt.Fprintf(os.Stderr, "[fence:linux] Resolved /etc/resolv.conf symlink -> %s\n", target)
+				fmt.Fprintf(os.Stderr, "[fence:linux] Resolved /etc/resolv.conf symlink -> %s (cross-mount)\n", target)
 			}
 		}
 	}
