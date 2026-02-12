@@ -81,3 +81,19 @@ release:
     name: fence
   draft: false
   prerelease: auto
+
+brews:
+  - name: fence
+    repository:
+      owner: Use-Tusk
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: https://github.com/Use-Tusk/fence
+    description: "Secure command sandbox with network and filesystem controls"
+    license: MIT
+    commit_author:
+      name: github-actions[bot]
+      email: github-actions[bot]@users.noreply.github.com
+    test: |
+      system "#{bin}/fence", "--version"
