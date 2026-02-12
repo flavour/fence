@@ -90,8 +90,8 @@ brews:
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     directory: Formula
     homepage: https://github.com/Use-Tusk/fence
-    description: "Secure command sandbox with network and filesystem controls"
-    license: MIT
+    description: "Lightweight, container-free sandbox for running commands with network and filesystem restrictions"
+    license: Apache-2.0
     commit_author:
       name: github-actions[bot]
       email: github-actions[bot]@users.noreply.github.com
