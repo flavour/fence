@@ -2,7 +2,20 @@
 
 ## Installation
 
-### From Source (recommended for now)
+### Homebrew (macOS)
+
+```bash
+brew tap use-tusk/tap
+brew install use-tusk/tap/fence
+```
+
+To update:
+
+```bash
+brew upgrade use-tusk/tap/fence
+```
+
+### From Source
 
 ```bash
 git clone https://github.com/Use-Tusk/fence

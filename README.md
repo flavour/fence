@@ -32,6 +32,19 @@ curl -fsSL https://raw.githubusercontent.com/Use-Tusk/fence/main/install.sh | sh
 <details>
 <summary>Other installation methods</summary>
 
+**Homebrew (macOS):**
+
+```bash
+brew tap use-tusk/tap
+brew install use-tusk/tap/fence
+```
+
+To update:
+
+```bash
+brew upgrade use-tusk/tap/fence
+```
+
 **Go install:**
 
 ```bash
