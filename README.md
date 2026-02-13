@@ -29,9 +29,6 @@ You can also think of Fence as a permission manager for your CLI agents. **Fence
 curl -fsSL https://raw.githubusercontent.com/Use-Tusk/fence/main/install.sh | sh
 ```
 
-<details>
-<summary>Other installation methods</summary>
-
 **Homebrew (macOS):**
 
 ```bash
@@ -39,11 +36,8 @@ brew tap use-tusk/tap
 brew install use-tusk/tap/fence
 ```
 
-To update:
-
-```bash
-brew upgrade use-tusk/tap/fence
-```
+<details>
+<summary>Other installation methods</summary>
 
 **Go install:**
 
