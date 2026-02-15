@@ -267,6 +267,11 @@ func validateDomainPattern(pattern string) error {
 		return errors.New("domain pattern cannot contain protocol, path, or port")
 	}
 
+	// Allow bare "*" to mean "allow all network"
+	if pattern == "*" {
+		return nil
+	}
+
 	// Handle wildcard patterns
 	if strings.HasPrefix(pattern, "*.") {
 		domain := pattern[2:]
