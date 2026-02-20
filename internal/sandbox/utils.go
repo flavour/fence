@@ -8,6 +8,11 @@ import (
 	"strings"
 )
 
+const (
+	sandboxTMPDIR         = "/tmp/fence"
+	sandboxTMPDIRFallback = "/tmp"
+)
+
 // ContainsGlobChars checks if a path pattern contains glob characters.
 func ContainsGlobChars(pattern string) bool {
 	return strings.ContainsAny(pattern, "*?[]")
@@ -50,9 +55,11 @@ func NormalizePath(pathPattern string) string {
 
 // GenerateProxyEnvVars creates environment variables for proxy configuration.
 func GenerateProxyEnvVars(httpPort, socksPort int) []string {
+	tmpDir := ensureSandboxTMPDIR()
+
 	envVars := []string{
 		"FENCE_SANDBOX=1",
-		"TMPDIR=/tmp/fence",
+		"TMPDIR=" + tmpDir,
 	}
 
 	if httpPort == 0 && socksPort == 0 {
@@ -102,6 +109,42 @@ func GenerateProxyEnvVars(httpPort, socksPort int) []string {
 	}
 
 	return envVars
+}
+
+// ensureSandboxTMPDIR ensures the dedicated sandbox TMPDIR exists and is usable.
+// Falls back to /tmp if the dedicated directory cannot be created.
+func ensureSandboxTMPDIR() string {
+	return ensureSandboxTMPDIRPath(sandboxTMPDIR, sandboxTMPDIRFallback)
+}
+
+// ensureSandboxTMPDIRPath ensures tmpDir exists and is a real directory (not a symlink).
+// Falls back to fallbackDir if the path is unsafe or cannot be created.
+func ensureSandboxTMPDIRPath(tmpDir, fallbackDir string) string {
+	info, err := os.Lstat(tmpDir)
+	if err == nil {
+		// Reject symlinks to avoid following attacker-controlled links in /tmp.
+		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+			return fallbackDir
+		}
+		return tmpDir
+	}
+
+	// Any error except non-existence means path is not safely usable.
+	if !os.IsNotExist(err) {
+		return fallbackDir
+	}
+
+	if err := os.MkdirAll(tmpDir, 0o700); err != nil {
+		return fallbackDir
+	}
+
+	// Re-check after creation to ensure we still have a real directory.
+	info, err = os.Lstat(tmpDir)
+	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+		return fallbackDir
+	}
+
+	return tmpDir
 }
 
 // EncodeSandboxedCommand encodes a command for sandbox monitoring.
