@@ -27,6 +27,7 @@ func TestMacOS_InteractiveShellHasJobControl(t *testing.T) {
 
 	// Build the fence binary.
 	fenceBin := t.TempDir() + "/fence"
+	// #nosec G204 -- arguments are fixed in this test and output path is a TempDir-controlled file.
 	build := exec.Command("go", "build", "-o", fenceBin, "../../cmd/fence")
 	build.Stdout = os.Stdout
 	build.Stderr = os.Stderr
@@ -35,6 +36,7 @@ func TestMacOS_InteractiveShellHasJobControl(t *testing.T) {
 	}
 
 	// Run "fence bash" with a PTY, the same way a user would from a terminal.
+	// #nosec G204 -- fenceBin is built by this test into TempDir and then executed immediately.
 	cmd := exec.Command(fenceBin, "bash")
 	cmd.Env = append(os.Environ(), "PS1=READY$ ")
 
@@ -42,7 +44,11 @@ func TestMacOS_InteractiveShellHasJobControl(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to start fence bash with PTY: %v", err)
 	}
-	defer ptmx.Close()
+	defer func() {
+		if closeErr := ptmx.Close(); closeErr != nil {
+			t.Logf("failed to close PTY: %v", closeErr)
+		}
+	}()
 
 	var output bytes.Buffer
 	done := make(chan struct{})
